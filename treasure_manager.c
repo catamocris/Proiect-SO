@@ -61,6 +61,28 @@ void write_treasure_data(Treasure_t treasure){
 }
 
 
+void log_action(char* hunt_id, char* log_msg){
+    char log_filepath[100];
+    snprintf(log_filepath, sizeof(log_filepath), "%s/logged_hunt.bin", hunt_id);
+    int log_fd = open(log_filepath, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR | S_IXUSR);
+    if(log_fd == -1){
+        perror("failed to open log file");
+        exit(-1);
+    }
+
+    if(write(log_fd, log_msg, strlen(log_msg)) == -1){
+        perror("failed to log message");
+        close(log_fd);
+        exit(-1);
+    }
+
+    if(close(log_fd) == -1){
+        perror("failed to close file");
+        exit(-1);
+    }
+}
+
+
 void add(char *hunt_id){
 
     // verific daca exista directorul hunt, creez daca nu exista
@@ -133,30 +155,14 @@ void add(char *hunt_id){
     }
 
     // dau log la operatia facuta
-    char log_filepath[100];
-    snprintf(log_filepath, sizeof(log_filepath), "%s/logged_hunt.bin", hunt_id);
-    int log_fd = open(log_filepath, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR | S_IXUSR);
-    if(log_fd == -1){
-        perror("failed to open log file");
-        exit(-1);
-    }
-
     char log_msg[100];
     snprintf(log_msg, sizeof(log_msg), "Added treasure %s\n", treasure.id);
-
-    if(write(log_fd, log_msg, strlen(log_msg)) == -1){
-        perror("failed to log message");
-        close(log_fd);
-        exit(-1);
-    }
-
-    if(close(log_fd) == -1){
-        perror("failed to close file");
-        exit(-1);
-    }
+    log_action(hunt_id, log_msg);
 
     // creez legatura simbolica
+    char log_filepath[100];
     char symlink_filepath[100];
+    snprintf(log_filepath, sizeof(log_filepath), "%s/logged_hunt.bin", hunt_id);
     snprintf(symlink_filepath, sizeof(symlink_filepath), "logged_hunt_%s", hunt_id);
     int symlink_fd = symlink(log_filepath, symlink_filepath); // daca exista deja, nu se face overwrite
 
@@ -311,27 +317,9 @@ void remove_treasure(char* hunt_id, char* treasure_id){
     write_message("\n");
 
     // log la stergerea treasure ului
-    char log_filepath[100];
-    snprintf(log_filepath, sizeof(log_filepath), "%s/logged_hunt.bin", hunt_id);
-
-    int log_fd = open(log_filepath, O_WRONLY | O_APPEND);
-    if(log_fd == -1){
-        perror("failed to open log file");
-        exit(-1);
-    }
-
     char log_msg[100];
     snprintf(log_msg, sizeof(log_msg), "Removed treasure %s\n", treasure_id);
-
-    if(write(log_fd, log_msg, strlen(log_msg)) == -1){
-        perror("failed to write in log file");
-        exit(-1);
-    }
-
-    if(close(log_fd) == -1){
-        perror("failed to close log file");
-        exit(-1);
-    }
+    log_action(hunt_id, log_msg);
 }
 
 void remove_hunt(char* hunt_id){
@@ -390,31 +378,25 @@ int main(int argc, char** argv){
         perror("not enough arguments");
         exit(-1);
     }
-
     if(strcmp(argv[1], "--add") == 0 && argc == 3){
         add(argv[2]);
         return 0;
     }
-
     if(strcmp(argv[1], "--list") == 0 && argc == 3){
         list(argv[2]);
         return 0;
     }
-
     if(strcmp(argv[1], "--view") == 0 && argc == 4){
         view(argv[2], argv[3]);
         return 0;
     }
-
     if(strcmp(argv[1], "--remove_treasure") == 0 && argc == 4){
         remove_treasure(argv[2], argv[3]);
         return 0;
     }
-
     if(strcmp(argv[1], "--remove_hunt") == 0 && argc == 3){
         remove_hunt(argv[2]);
         return 0;
     }
-
     return 0;
 }
