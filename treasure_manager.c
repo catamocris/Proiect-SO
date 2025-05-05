@@ -9,16 +9,56 @@
 
 #define ID_LENGTH 15
 #define USER_LENGTH 15
+#define COORDINATE_LENGTH 10
 #define CLUE_LENGTH 100
+#define VALUE_LENGTH 100
+#define FP_LENGTH 50
+
+#define BUF_SIZE 256
 
 typedef struct{
     char id[ID_LENGTH];
     char user[USER_LENGTH];
-    float latitude;
-    float longitude;
+    char latitude[COORDINATE_LENGTH];
+    char longitude[COORDINATE_LENGTH];
     char clue[CLUE_LENGTH];
-    int value;
+    char value[VALUE_LENGTH];
 }Treasure_t;
+
+
+void write_message(char *msg){
+    write(1, msg, strlen(msg));
+}
+
+
+void read_input(char *input, int size){
+    int bytes_read = read(0, input, size-1);
+    
+    if(bytes_read > 0){
+        input[bytes_read] = '\0';
+        if (input[bytes_read - 1] == '\n') {
+            input[bytes_read - 1] = '\0';
+        }
+    }
+    
+}
+
+
+void write_treasure_data(Treasure_t treasure){
+        write_message("Treasure ID: ");
+        write_message(treasure.id);
+        write_message(" -- User: ");
+        write_message(treasure.user);
+        write_message(" -- Latitude: ");
+        write_message(treasure.latitude);
+        write_message(" -- Longitude: ");
+        write_message(treasure.longitude);
+        write_message(" -- Clue: ");
+        write_message(treasure.clue);
+        write_message(" -- Value: ");
+        write_message(treasure.value);
+        write_message("\n");
+}
 
 
 void add(char *hunt_id){
@@ -30,10 +70,12 @@ void add(char *hunt_id){
             perror("failed to create directory");
             exit(-1);
         }
-        printf("directory '%s' created successfully \n\n", hunt_id);
+        write_message("Hunt directory created successfully !\n");
     }
     else{
-        printf("adding to directory '%s'\n\n", hunt_id);
+        write_message("Adding treasure to ");
+        write_message(hunt_id);
+        write_message("\n");
     }
 
     // deschid directorul
@@ -52,25 +94,23 @@ void add(char *hunt_id){
     // citesc datele pt treasure
     Treasure_t treasure;
 
-    printf("Enter treasure ID: ");
-    scanf("%14s", treasure.id);
+    write_message("Enter treasure ID: ");
+    read_input(treasure.id, ID_LENGTH);
 
-    printf("Enter username: ");
-    scanf("%14s", treasure.user);
+    write_message("Enter username: ");
+    read_input(treasure.user, USER_LENGTH);
 
-    printf("Enter latitude: ");
-    scanf("%f", &treasure.latitude);
+    write_message("Enter latitude: ");
+    read_input(treasure.latitude, COORDINATE_LENGTH);
 
-    printf("Enter longitude: ");
-    scanf("%f", &treasure.longitude);
+    write_message("Enter longitude: ");
+    read_input(treasure.longitude, COORDINATE_LENGTH);
 
-    printf("Enter clue: ");
-    while(getchar() != '\n'); // ca sa nu citeasca newline
-    fgets(treasure.clue, sizeof(treasure.clue), stdin);
-    treasure.clue[strcspn(treasure.clue, "\n")] = '\0'; // strcspn cauta prima aparitie a unui caracter din al doilea string, returneaza indexul
+    write_message("Enter clue: ");
+    read_input(treasure.clue, CLUE_LENGTH);
 
-    printf("Enter value: ");
-    scanf("%d", &treasure.value);
+    write_message("Enter value: ");
+    read_input(treasure.value, VALUE_LENGTH);
 
     // scriu datele in fisierul treasures
     char treasure_filepath[100];
@@ -120,7 +160,9 @@ void add(char *hunt_id){
     snprintf(symlink_filepath, sizeof(symlink_filepath), "logged_hunt_%s", hunt_id);
     int symlink_fd = symlink(log_filepath, symlink_filepath); // daca exista deja, nu se face overwrite
 
-    printf("\nadded treasure %s to hunt %s\n", treasure.id, hunt_id);
+    write_message("Added treasure to ");
+    write_message(hunt_id);
+    write_message("!\n");
 
 }
 
@@ -138,7 +180,9 @@ void list(char* hunt_id){
     }
 
     // afisez
-    printf("Hunt: %s\n", hunt_id);
+    write_message("Hunt: ");
+    write_message(hunt_id);
+    write_message("\n");
 
     Treasure_t treasure;
     int len;
@@ -147,8 +191,8 @@ void list(char* hunt_id){
             perror("error reading treasure data");
             exit(-1);
         }
-        printf("Treasure ID: %s -- User: %s -- Latitude: %f -- Longitude: %f -- Clue: %s -- Value: %d\n",
-                treasure.id, treasure.user, treasure.latitude, treasure.longitude, treasure.clue, treasure.value);        
+
+        write_treasure_data(treasure);
     }
 
     // file info 
@@ -161,6 +205,13 @@ void list(char* hunt_id){
 
     printf("\nFile size: %ld bytes \n", info.st_size);
     printf("Last modified: %s \n", ctime(&info.st_mtime));
+
+    char file_size[BUF_SIZE];
+    snprintf(file_size, sizeof(file_size), "File size: %ld bytes\n", info.st_size);
+    write_message(file_size);
+
+    write_message("Last modified: ");
+    write_message(ctime(&info.st_mtime));
 
     // inchid fisierul
     if(close(treasure_fd) == -1){
@@ -182,17 +233,12 @@ void view(char* hunt_id, char* treasure_id){
 
     Treasure_t treasure;
     int len;
-    char treasure_msg[500];
     
     while((len = read(treasure_fd, &treasure, sizeof(Treasure_t))) > 0){
 
-
         // cand gasesc id ul, afisez datele
         if(strcmp(treasure.id, treasure_id) == 0){
-            snprintf(treasure_msg, sizeof(treasure_msg), 
-                "Treasure ID: %s -- User: %s -- Latitude: %f -- Longitude: %f -- Clue: %s -- Value: %d\n",
-                treasure.id, treasure.user, treasure.latitude, treasure.longitude, treasure.clue, treasure.value);
-            printf("%s", treasure_msg);
+            write_treasure_data(treasure);
             break;
         }
     }
@@ -242,7 +288,7 @@ void remove_treasure(char* hunt_id, char* treasure_id){
     close(aux_fd);
 
     if(found == 0){
-        printf("treasure %s not found \n", treasure_id);
+        write_message("treasure not found \n");
         remove(aux_filepath);
         return;
     }
@@ -258,7 +304,11 @@ void remove_treasure(char* hunt_id, char* treasure_id){
         exit(-1);
     }
 
-    printf("removed treasure %s from hunt %s \n", treasure_id, hunt_id);
+    write_message("Removed treasure ");
+    write_message(treasure_id);
+    write_message(" from hunt ");
+    write_message(hunt_id);
+    write_message("\n");
 
     // log la stergerea treasure ului
     char log_filepath[100];
@@ -329,7 +379,9 @@ void remove_hunt(char* hunt_id){
         exit(-1);
     }
 
-    printf("removed %s directory\n", hunt_id);
+    write_message("removed ");
+    write_message(hunt_id);
+    write_message("\n");
 }
 
 int main(int argc, char** argv){
