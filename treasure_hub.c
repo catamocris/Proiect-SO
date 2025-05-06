@@ -16,7 +16,10 @@ int monitor_running = 0;
 
 
 void list_hunts(){
-    printf("listing hunts...\n");
+    if (execlp("./treasure_manager", "./treasure_manager", "--list_hunts", (char *)NULL) == -1) {
+            perror("Error executing treasure_manager");
+    }
+    write(0, "\n", strlen("\n"));
 }
 
 void list_treasures(){
@@ -181,7 +184,7 @@ int main(){
         if(strcmp(input, "start_monitor") == 0){
             start_monitor();
         } else if(strcmp(input, "list_hunts") == 0){
-            // list hunts
+            list_hunts();
         } else if(strcmp(input, "list_treasures") == 0){
             list_treasures();
         } else if(strcmp(input, "view_treasure") == 0){

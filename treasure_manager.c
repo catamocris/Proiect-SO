@@ -369,9 +369,40 @@ void remove_hunt(char* hunt_id){
     write_message("\n");
 }
 
+
+void list_hunts(){
+    DIR* dir = opendir(".");
+    if(dir == NULL){
+        perror("failed to open current directory");
+        exit(-1);
+    }
+
+    struct dirent* current_dir;
+    struct stat path_stat;
+
+    write_message("Hunts:\n");
+
+    while((current_dir = readdir(dir)) != NULL){
+        // skip . (leg director curent) si .. (leg director parinte)
+        if(strcmp(current_dir->d_name, ".") == 0 || strcmp(current_dir->d_name, "..") == 0){
+            continue;
+        }
+        if (stat(current_dir->d_name, &path_stat) == -1) {
+            perror("stat failed");
+            exit(-1);
+        }
+        if(S_ISDIR(path_stat.st_mode) ){
+            write_message("\t");
+            write_message(current_dir->d_name);
+            write_message("\n");
+        }
+    }
+}
+
+
 int main(int argc, char** argv){
     
-    if(argc < 3){
+    if(argc < 2){
         perror("not enough arguments");
         exit(-1);
     }
@@ -395,5 +426,10 @@ int main(int argc, char** argv){
         remove_hunt(argv[2]);
         return 0;
     }
+    if(strcmp(argv[1], "--list_hunts") == 0 && argc == 2){
+        list_hunts();
+        return 0;
+    }
+
     return 0;
 }
