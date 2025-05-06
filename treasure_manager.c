@@ -209,9 +209,6 @@ void list(char* hunt_id){
         exit(-1);
     }
 
-    printf("\nFile size: %ld bytes \n", info.st_size);
-    printf("Last modified: %s \n", ctime(&info.st_mtime));
-
     char file_size[BUF_SIZE];
     snprintf(file_size, sizeof(file_size), "File size: %ld bytes\n", info.st_size);
     write_message(file_size);

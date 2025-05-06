@@ -20,7 +20,23 @@ void list_hunts(){
 }
 
 void list_treasures(){
-    printf("listing treasures...\n");
+    char hunt_id[10];
+    write(1, "Enter hunt_id: ", strlen("Enter hunt_id: "));
+    int bytes_read = read(0, hunt_id, sizeof(hunt_id)-1);
+    write(0, "\n", strlen("\n"));
+    if(bytes_read < 0){
+        perror("Could not read hunt_id.");
+        exit(-1);
+    }
+
+    hunt_id[bytes_read] = '\0';
+    if(hunt_id[bytes_read - 1] == '\n')
+        hunt_id[bytes_read - 1] = '\0';
+    
+    if (execlp("./treasure_manager", "./treasure_manager", "--list", hunt_id, (char *)NULL) == -1) {
+            perror("Error executing treasure_manager");
+    }
+    
 }
 
 void view_treasure(){
@@ -115,6 +131,15 @@ int main(){
     char input[256];
     int bytes_read;
 
+    // creez executabil pt treasure_manager
+    char *exec_command = "gcc -o treasure_manager treasure_manager.c";
+    int check_exec = system(exec_command); 
+    if (check_exec) 
+    {
+        perror("Could not compile treasure_manager");
+        exit(-1);
+    }
+
     while(1){
 
         write(1, ">> ", strlen(">> "));                   // 1 - stdout
@@ -133,7 +158,7 @@ int main(){
         } else if(strcmp(input, "list_hunts") == 0){
             // list hunts
         } else if(strcmp(input, "list_treasures") == 0){
-            // list treasures
+            list_treasures();
         } else if(strcmp(input, "view_treasures") == 0){
             // view treasure
         } else if(strcmp(input, "stop_monitor") == 0){
