@@ -40,7 +40,32 @@ void list_treasures(){
 }
 
 void view_treasure(){
-    printf("viewing treasure...\n");
+    char hunt_id[10];
+    write(1, "Enter hunt_id: ", strlen("Enter hunt_id: "));
+    int bytes_read = read(0, hunt_id, sizeof(hunt_id)-1);
+    if(bytes_read < 0){
+        perror("Could not read hunt_id.");
+        exit(-1);
+    }
+    hunt_id[bytes_read] = '\0';
+    if(hunt_id[bytes_read - 1] == '\n')
+        hunt_id[bytes_read - 1] = '\0';
+
+    char treasure_id[10];
+    write(1, "Enter treasure_id: ", strlen("Enter treasure_id: "));
+    bytes_read = read(0, treasure_id, sizeof(treasure_id)-1);
+    write(0, "\n", strlen("\n"));
+    if(bytes_read < 0){
+        perror("Could not read treasure_id.");
+        exit(-1);
+    }
+    treasure_id[bytes_read] = '\0';
+    if(treasure_id[bytes_read - 1] == '\n')
+        treasure_id[bytes_read - 1] = '\0';
+    
+    if (execlp("./treasure_manager", "./treasure_manager", "--view", hunt_id, treasure_id, (char *)NULL) == -1) {
+            perror("Error executing treasure_manager");
+    }
 }
 
 
@@ -159,8 +184,8 @@ int main(){
             // list hunts
         } else if(strcmp(input, "list_treasures") == 0){
             list_treasures();
-        } else if(strcmp(input, "view_treasures") == 0){
-            // view treasure
+        } else if(strcmp(input, "view_treasure") == 0){
+            view_treasure();
         } else if(strcmp(input, "stop_monitor") == 0){
             stop_monitor();
         } else if(strcmp(input, "exit") == 0){
