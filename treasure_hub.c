@@ -16,58 +16,101 @@ int monitor_running = 0;
 
 
 void list_hunts(){
-    if (execlp("./treasure_manager", "./treasure_manager", "--list_hunts", (char *)NULL) == -1) {
-            perror("Error executing treasure_manager");
+    if(monitor_running == 0){
+        write(1, "Monitor not running. \n", strlen("Monitor not running. \n"));
+        return;
     }
-    write(0, "\n", strlen("\n"));
+    pid_t pid = fork();
+    if (pid < 0) {
+        perror("Failed to fork process.");
+        exit(-1);
+    }
+    if(pid == 0) { 
+        if (execlp("./treasure_manager", "./treasure_manager", "--list_hunts", (char *)NULL) == -1) {
+            perror("Error executing treasure_manager");
+            exit(-1);
+        }
+    } else {
+        waitpid(pid, NULL, 0);
+    }
+    write(1, "\n", strlen("\n"));
 }
 
 void list_treasures(){
-    char hunt_id[10];
-    write(1, "Enter hunt_id: ", strlen("Enter hunt_id: "));
-    int bytes_read = read(0, hunt_id, sizeof(hunt_id)-1);
-    write(0, "\n", strlen("\n"));
-    if(bytes_read < 0){
-        perror("Could not read hunt_id.");
+    if(monitor_running == 0){
+        write(1, "Monitor not running. \n", strlen("Monitor not running. \n"));
+        return;
+    }
+    pid_t pid = fork();
+    if (pid < 0) {
+        perror("Failed to fork process.");
         exit(-1);
     }
 
-    hunt_id[bytes_read] = '\0';
-    if(hunt_id[bytes_read - 1] == '\n')
-        hunt_id[bytes_read - 1] = '\0';
-    
-    if (execlp("./treasure_manager", "./treasure_manager", "--list", hunt_id, (char *)NULL) == -1) {
-            perror("Error executing treasure_manager");
+    if(pid == 0){
+        char hunt_id[10];
+        write(1, "Enter hunt_id: ", strlen("Enter hunt_id: "));
+        int bytes_read = read(0, hunt_id, sizeof(hunt_id)-1);
+        write(1, "\n", strlen("\n"));
+        if(bytes_read < 0){
+            perror("Could not read hunt_id.");
+            exit(-1);
+        }
+
+        hunt_id[bytes_read] = '\0';
+        if(hunt_id[bytes_read - 1] == '\n')
+            hunt_id[bytes_read - 1] = '\0';
+        
+        if (execlp("./treasure_manager", "./treasure_manager", "--list", hunt_id, (char *)NULL) == -1) {
+                perror("Error executing treasure_manager");
+        }
+    } else {
+        waitpid(pid, NULL, 0);
     }
+    
     
 }
 
 void view_treasure(){
-    char hunt_id[10];
-    write(1, "Enter hunt_id: ", strlen("Enter hunt_id: "));
-    int bytes_read = read(0, hunt_id, sizeof(hunt_id)-1);
-    if(bytes_read < 0){
-        perror("Could not read hunt_id.");
+    if(monitor_running == 0){
+        write(1, "Monitor not running. \n", strlen("Monitor not running. \n"));
+        return;
+    }
+    pid_t pid = fork();
+    if (pid < 0) {
+        perror("Failed to fork process.");
         exit(-1);
     }
-    hunt_id[bytes_read] = '\0';
-    if(hunt_id[bytes_read - 1] == '\n')
-        hunt_id[bytes_read - 1] = '\0';
-
-    char treasure_id[10];
-    write(1, "Enter treasure_id: ", strlen("Enter treasure_id: "));
-    bytes_read = read(0, treasure_id, sizeof(treasure_id)-1);
-    write(0, "\n", strlen("\n"));
-    if(bytes_read < 0){
-        perror("Could not read treasure_id.");
-        exit(-1);
-    }
-    treasure_id[bytes_read] = '\0';
-    if(treasure_id[bytes_read - 1] == '\n')
-        treasure_id[bytes_read - 1] = '\0';
     
-    if (execlp("./treasure_manager", "./treasure_manager", "--view", hunt_id, treasure_id, (char *)NULL) == -1) {
-            perror("Error executing treasure_manager");
+    if(pid == 0){
+        char hunt_id[10];
+        write(1, "Enter hunt_id: ", strlen("Enter hunt_id: "));
+        int bytes_read = read(0, hunt_id, sizeof(hunt_id)-1);
+        if(bytes_read < 0){
+            perror("Could not read hunt_id.");
+            exit(-1);
+        }
+        hunt_id[bytes_read] = '\0';
+        if(hunt_id[bytes_read - 1] == '\n')
+            hunt_id[bytes_read - 1] = '\0';
+
+        char treasure_id[10];
+        write(1, "Enter treasure_id: ", strlen("Enter treasure_id: "));
+        bytes_read = read(0, treasure_id, sizeof(treasure_id)-1);
+        write(1, "\n", strlen("\n"));
+        if(bytes_read < 0){
+            perror("Could not read treasure_id.");
+            exit(-1);
+        }
+        treasure_id[bytes_read] = '\0';
+        if(treasure_id[bytes_read - 1] == '\n')
+            treasure_id[bytes_read - 1] = '\0';
+        
+        if (execlp("./treasure_manager", "./treasure_manager", "--view", hunt_id, treasure_id, (char *)NULL) == -1) {
+                perror("Error executing treasure_manager");
+        }
+    } else {
+        waitpid(pid, NULL, 0);
     }
 }
 
