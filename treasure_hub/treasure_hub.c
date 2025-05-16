@@ -1,4 +1,4 @@
-#define _XOPEN_SOURCE 700
+#define _XOPEN_SOURCE 700   // for sigaction
 
 #include "treasure_hub.h"
 #include "../treasure_manager/io_functions.h"
@@ -14,11 +14,18 @@
 #include <sys/stat.h>
 
 
-#define EXEC_PATH "../treasure_manager/treasure_manager"
+#define EXEC_PATH "../treasure_manager/treasure_manager" // path to treasure_manager executable
 
-pid_t monitor_pid = -1;
-int monitor_running = 0;
 
+pid_t monitor_pid = -1;     // variables used to track
+int monitor_running = 0;    // the monitor process
+
+
+// -----------------------------------------------------------------------------
+// hub functions using treasure_manager
+// -----------------------------------------------------------------------------
+
+// lists all hunts -------------------------------------------------------------
 
 void list_hunts_hub(){
     if(monitor_running == 0){
@@ -30,16 +37,17 @@ void list_hunts_hub(){
         perror("Failed to fork process\n");
         exit(-1);
     }
-    if(pid == 0) { 
+    if(pid == 0) {              // child process -> executes treasure_manager with --list_hunts
         if (execlp(EXEC_PATH, EXEC_PATH, "--list_hunts", NULL) == -1) {
             perror("Error executing treasure_manager\n");
             exit(-1);
         }
     } else {
-        waitpid(pid, NULL, 0);
+        waitpid(pid, NULL, 0);  // parent process -> waits for child to finish
     }
-    write_message("\n");
 }
+
+// lists all treasures for a specific hunt -------------------------------------
 
 void list_treasures_hub(){
     if(monitor_running == 0){
@@ -51,9 +59,9 @@ void list_treasures_hub(){
         perror("Failed to fork process\n");
         exit(-1);
     }
-    if(pid == 0){
+    if(pid == 0){               // child process -> executes treasure_manager with --list
         char hunt_id[10];
-        write_message("Enter hunt_id: ");
+        write_message("Enter hunt_id: ");       // prompt for hunt_id
         read_input(hunt_id, sizeof(hunt_id));
         
         if (execlp(EXEC_PATH, EXEC_PATH, "--list", hunt_id, NULL) == -1) {
@@ -61,10 +69,11 @@ void list_treasures_hub(){
                 exit(-1);
         }
     } else {
-        waitpid(pid, NULL, 0);
+        waitpid(pid, NULL, 0);  // parent process -> waits for child to finish
     }
-    write_message("\n");
 }
+
+// views a specific treasure from a specific hunt ------------------------------
 
 void view_treasure_hub(){
     if(monitor_running == 0){
@@ -77,14 +86,14 @@ void view_treasure_hub(){
         exit(-1);
     }
     
-    if(pid == 0){
+    if(pid == 0){               // child process -> executes treasure_manager with --view
         char hunt_id[10];
         char treasure_id[10];
 
-        write_message("Enter hunt_id: ");
+        write_message("Enter hunt_id: ");           // prompt for hunt_id
         read_input(hunt_id, sizeof(hunt_id));
 
-        write_message("Enter treasure_id: ");
+        write_message("Enter treasure_id: ");       // prompt for treasure_id
         read_input(treasure_id, sizeof(treasure_id));
         
         if (execlp(EXEC_PATH, EXEC_PATH, "--view", hunt_id, treasure_id, NULL) == -1) {
@@ -92,10 +101,16 @@ void view_treasure_hub(){
                 exit(-1);
         }
     } else {
-        waitpid(pid, NULL, 0);
+        waitpid(pid, NULL, 0);  // parent process -> waits for child to finish
     }
-    write_message("\n");
 }
+
+
+// -----------------------------------------------------------------------------
+// monitor functions
+// -----------------------------------------------------------------------------
+
+// handles signals sent to the monitor process ---------------------------------
 
 void handle_signal(int sig){
     if(sig == SIGUSR1){
@@ -106,24 +121,29 @@ void handle_signal(int sig){
         view_treasure_hub();
     }
 }
+
+// runs the monitor process ----------------------------------------------------
+
 void run_monitor(){
     struct sigaction sa;
-    sa.sa_handler = handle_signal;
+    sa.sa_handler = handle_signal;          // sets the signal handler
     memset(&sa, 0, sizeof(struct sigaction));
 
-    sigaction(SIGUSR1, &sa, NULL);
-    sigaction(SIGUSR2, &sa, NULL);
-    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGUSR1, &sa, NULL);          // handle SIGUSR1
+    sigaction(SIGUSR2, &sa, NULL);          // handle SIGUSR2
+    sigaction(SIGINT, &sa, NULL);           // handle SIGINT
 
     struct sigaction sa_term;
     memset(&sa_term, 0, sizeof(sa_term));
-    sa_term.sa_handler = SIG_DFL;
+    sa_term.sa_handler = SIG_DFL;           // restores default handler for SIGTERM
     sigaction(SIGTERM, &sa_term, NULL);
 
     while(1){
-        pause();
+        pause();                            // waits for signals
     }
 }
+
+// starts the monitor process --------------------------------------------------
 
 void start_monitor(){
     if(monitor_pid != -1){
@@ -136,7 +156,7 @@ void start_monitor(){
         exit(-1);
     }
     if(monitor_pid == 0){
-        run_monitor();
+        run_monitor();              // child process -> runs the monitor
         exit(0);
     } else {
         monitor_running = 1;
@@ -144,17 +164,21 @@ void start_monitor(){
     }
 }
 
+// stops the monitor process ---------------------------------------------------
+
 void stop_monitor(){
     if(monitor_pid == -1){
         write_message("No monitor process running!\n");
         return;
     }
-    kill(monitor_pid, SIGTERM);
-    waitpid(monitor_pid, NULL, 0);
+    kill(monitor_pid, SIGTERM);         // sends termination signal to the monitor process
+    waitpid(monitor_pid, NULL, 0);      // waits for the monitor process to finish
     monitor_pid = -1;
     monitor_running = 0;
     write_message("Monitor stopped!\n");
 }
+
+// exits the program -----------------------------------------------------------
 
 void exit_command(){
     if(monitor_running != 0){
