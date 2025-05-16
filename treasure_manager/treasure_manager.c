@@ -220,11 +220,6 @@ void list(char* hunt_id){
     write_message(ctime(&info.st_mtime));
     write_message("\n");
 
-    char num_treasures_msg[BUF_SIZE];                     // calculates number of treasures
-    sprintf(num_treasures_msg, "Number of treasures: %ld\n", info.st_size / sizeof(Treasure_t));
-    write_message(num_treasures_msg);
-
-
     if(close(treasure_fd) == -1){                         // closes the treasure file
         perror("failed to close file\n");
         exit(-1);
@@ -388,6 +383,8 @@ void remove_hunt(char* hunt_id){
 }
 
 
+// lists all hunts in the "Hunts" directory ------------------------------------
+
 void list_hunts(){
     DIR* dir = opendir("Hunts");                  // opens the "Hunts" directory
     if(dir == NULL){
@@ -398,6 +395,7 @@ void list_hunts(){
     struct dirent* current_dir;
     struct stat path_stat;
     char path[512];
+    char treasure_path[600];
 
     write_message("Hunts:\n");
 
@@ -413,9 +411,28 @@ void list_hunts(){
             exit(-1);
         }
         if(S_ISDIR(path_stat.st_mode) ){         // if it's a directory
+            
+            sprintf(treasure_path, "%s/treasures.bin", path);
+            int treasure_fd = open(treasure_path, O_RDONLY);
+            if(treasure_fd == -1){
+                perror("failed to open treasures file\n");
+                exit(-1);
+            }
+            int count = 0;
+            Treasure_t treasure;
+            if(treasure_fd != -1){
+                while(read(treasure_fd, &treasure, sizeof(Treasure_t)) == sizeof(Treasure_t)){
+                    count++;
+                }
+                close(treasure_fd);
+            }
+            
             write_message("\t");
-            write_message(current_dir->d_name);  // prints the directory name
-            write_message("\n");
+            write_message(current_dir->d_name);    // prints the directory name
+            write_message(" -- ");
+            char buf[BUF_SIZE];
+            sprintf(buf, "%d treasures\n", count); // prints the number of treasures
+            write_message(buf);
         }
     }
 
