@@ -22,6 +22,9 @@ int monitor_running = 0;
 int monitor_stopping = 0;
 
 
+int monitor_pipe[2];         // pipe: main process reads, monitor process writes
+
+
 // -----------------------------------------------------------------------------
 // hub functions using treasure_manager
 // -----------------------------------------------------------------------------
@@ -136,7 +139,7 @@ void handle_signal(int sig){
 }
 
 void handle_sigterm(int sig){
-    sleep(10);                              // delayes for 10 seconds before stopping
+    sleep(5);                               // delayes for 5 seconds before stopping
     write_message("Monitor stopped!\n");
     exit(0);                                // exits the monitor process
 }
@@ -179,6 +182,11 @@ void start_monitor(){
         write_message("Monitor already running!\n");
         return;
     }
+
+    if(pipe(monitor_pipe) == -1){           // creates the pipe
+        perror("Failed to create pipe\n");
+        exit(-1);
+    }
     
     struct sigaction sa_child;
     memset(&sa_child, 0, sizeof(struct sigaction));
@@ -190,10 +198,15 @@ void start_monitor(){
         perror("Failed to fork monitor process\n");
         exit(-1);
     }
-    if(monitor_pid == 0){
-        run_monitor();              // child process -> runs the monitor
+
+    if(monitor_pid == 0){                   // child process -> runs the monitor
+        close(monitor_pipe[0]);                 // closes read
+        dup2(monitor_pipe[1], STDOUT_FILENO);   // redirects stdout to pipe
+        close(monitor_pipe[1]);                 // closes write
+        run_monitor();
         exit(0);
-    } else {
+    } else {                                // parent process
+        close(monitor_pipe[1]);                 // closes write
         monitor_running = 1;
         monitor_stopping = 0;
         write_message("Monitor started successfully!\n");
@@ -214,6 +227,14 @@ void stop_monitor(){
     monitor_stopping = 1;
     write_message("Stopping monitor...\n");
     kill(monitor_pid, SIGTERM);         // sends SIGTERM to the monitor process
+
+    char buffer[1024];
+    int bytes_read = read(monitor_pipe[0], buffer, sizeof(buffer)); // reads from the pipe
+    if(bytes_read > 0){
+        buffer[bytes_read] = '\0';
+        write_message(buffer);         // prints the message from the monitor process
+    }
+    close(monitor_pipe[0]);            // closes read
 }
 
 // exits the program -----------------------------------------------------------
