@@ -17,8 +17,9 @@
 #define EXEC_PATH "../treasure_manager/treasure_manager" // path to treasure_manager executable
 
 
-pid_t monitor_pid = -1;     // variables used to track
-int monitor_running = 0;    // the monitor process
+pid_t monitor_pid = -1;     // variables used to track the monitor process
+int monitor_running = 0;
+int monitor_stopping = 0;
 
 
 // -----------------------------------------------------------------------------
@@ -28,6 +29,10 @@ int monitor_running = 0;    // the monitor process
 // lists all hunts -------------------------------------------------------------
 
 void list_hunts_hub(){
+    if(monitor_stopping == 1){
+        write_message("Monitor is stopping! Please wait...\n");
+        return;
+    }
     if(monitor_running == 0){
         write_message("Monitor not running!\n");
         return;
@@ -50,6 +55,10 @@ void list_hunts_hub(){
 // lists all treasures for a specific hunt -------------------------------------
 
 void list_treasures_hub(){
+    if(monitor_stopping == 1){
+        write_message("Monitor is stopping! Please wait...\n");
+        return;
+    }
     if(monitor_running == 0){
         write_message("Monitor not running!\n");
         return;
@@ -76,6 +85,10 @@ void list_treasures_hub(){
 // views a specific treasure from a specific hunt ------------------------------
 
 void view_treasure_hub(){
+    if(monitor_stopping == 1){
+        write_message("Monitor is stopping! Please wait...\n");
+        return;
+    }
     if(monitor_running == 0){
         write_message("Monitor not running!\n");
         return;
@@ -122,12 +135,28 @@ void handle_signal(int sig){
     }
 }
 
+void handle_sigterm(int sig){
+    sleep(10);                              // delayes for 10 seconds before stopping
+    write_message("Monitor stopped!\n");
+    exit(0);                                // exits the monitor process
+}
+
+void handle_sigchld(int sig){               // sends SIGCHLD to parent when a child process terminates
+    int status;
+    pid_t pid = waitpid(-1, &status, WNOHANG); 
+    if(pid == monitor_pid){                 // resets flags if the monitor process terminates
+        monitor_running = 0;
+        monitor_stopping = 0;
+        monitor_pid = -1;
+    }
+}
+
 // runs the monitor process ----------------------------------------------------
 
 void run_monitor(){
     struct sigaction sa;
-    sa.sa_handler = handle_signal;          // sets the signal handler
     memset(&sa, 0, sizeof(struct sigaction));
+    sa.sa_handler = handle_signal;          // sets the signal handler
 
     sigaction(SIGUSR1, &sa, NULL);          // handle SIGUSR1
     sigaction(SIGUSR2, &sa, NULL);          // handle SIGUSR2
@@ -135,7 +164,7 @@ void run_monitor(){
 
     struct sigaction sa_term;
     memset(&sa_term, 0, sizeof(sa_term));
-    sa_term.sa_handler = SIG_DFL;           // restores default handler for SIGTERM
+    sa_term.sa_handler = handle_sigterm;    // sets the signal handler for SIGTERM
     sigaction(SIGTERM, &sa_term, NULL);
 
     while(1){
@@ -150,6 +179,12 @@ void start_monitor(){
         write_message("Monitor already running!\n");
         return;
     }
+    
+    struct sigaction sa_child;
+    memset(&sa_child, 0, sizeof(struct sigaction));
+    sa_child.sa_handler = handle_sigchld;   // sets the signal handler for SIGCHLD
+    sigaction(SIGCHLD, &sa_child, NULL);
+
     monitor_pid = fork();
     if(monitor_pid < 0){
         perror("Failed to fork monitor process\n");
@@ -160,6 +195,7 @@ void start_monitor(){
         exit(0);
     } else {
         monitor_running = 1;
+        monitor_stopping = 0;
         write_message("Monitor started successfully!\n");
     }
 }
@@ -171,16 +207,22 @@ void stop_monitor(){
         write_message("No monitor process running!\n");
         return;
     }
-    kill(monitor_pid, SIGTERM);         // sends termination signal to the monitor process
-    waitpid(monitor_pid, NULL, 0);      // waits for the monitor process to finish
-    monitor_pid = -1;
-    monitor_running = 0;
-    write_message("Monitor stopped!\n");
+    if(monitor_stopping == 1){
+        write_message("Monitor is stopping! Please wait...\n");
+        return;
+    }
+    monitor_stopping = 1;
+    write_message("Stopping monitor...\n");
+    kill(monitor_pid, SIGTERM);         // sends SIGTERM to the monitor process
 }
 
 // exits the program -----------------------------------------------------------
 
 void exit_command(){
+    if(monitor_stopping == 1){
+        write_message("Monitor is stopping! Please wait...\n");
+        return;
+    }
     if(monitor_running != 0){
         write_message("Monitor is still running! Please stop before exiting.\n");
         return;
