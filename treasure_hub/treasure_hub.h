@@ -18,5 +18,7 @@ void start_monitor();
 void stop_monitor();
 void exit_command();
 
+// --------------------------------------
+void calculate_score();
 
 #endif

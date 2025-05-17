@@ -25,6 +25,8 @@ int main(){
             list_treasures_hub();
         } else if(strcmp(input, "view_treasure") == 0){
             view_treasure_hub();
+        } else if(strcmp(input, "calculate_score") == 0){
+            calculate_score();
         } else if(strcmp(input, "stop_monitor") == 0){
             stop_monitor();
         } else if(strcmp(input, "exit") == 0){

@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <dirent.h>
 
 
 #define EXEC_PATH "../treasure_manager/treasure_manager" // path to treasure_manager executable
@@ -250,4 +251,48 @@ void exit_command(){
     }
     write_message("Exiting...\n");
     exit(0);
+}
+
+
+// -----------------------------------------------------------------------------
+// calculates the score of all users
+// -----------------------------------------------------------------------------
+
+void calculate_score(){
+    if(monitor_stopping == 1){
+        write_message("Monitor is stopping! Please wait...\n");
+        return;
+    }
+    if(monitor_running == 0){
+        write_message("Monitor not running!\n");
+        return;
+    }
+    
+    char* hunts_dir = "../treasure_manager/Hunts";                  // path to hunts directory
+    DIR* dir = opendir(hunts_dir);
+    if(dir == NULL){
+        perror("Failed to open hunts directory\n");
+        return;
+    }
+
+    struct dirent *hunt;
+    while(hunt = readdir(dir)){
+        if(strcmp(hunt->d_name, ".") == 0 || strcmp(hunt->d_name, "..") == 0){
+            continue;                                               // skips current and parent directories
+        }
+
+        pid_t pid = fork();                                         // forks a new process for each hunt
+        if (pid < 0) {
+            perror("Failed to fork process\n");
+            exit(-1);
+        }
+        if(pid == 0){                                               // child process -> executes calculate_score
+            execlp("./calculate_score", "./calculate_score", hunt->d_name, NULL);
+        } else {
+            write_message(hunt->d_name);                            // parent process -> writes the hunt name and waits for child
+            write_message("\n");
+            waitpid(pid, NULL, 0);
+        }
+    }
+    closedir(dir);
 }
