@@ -113,15 +113,15 @@ void log_action(char* hunt_path, char* log_msg){
 void add(char *hunt_id){
 
     struct stat buf;
-    if(stat("Hunts", &buf) != 0){                                   // creates "Hunts" directory
-        if(mkdir("Hunts", S_IRUSR | S_IWUSR | S_IXUSR) != 0){       // for storing all hunts
+    if(stat("../treasure_manager/Hunts", &buf) != 0){                                   // creates "Hunts" directory
+        if(mkdir("../treasure_manager/Hunts", S_IRUSR | S_IWUSR | S_IXUSR) != 0){       // for storing all hunts
             perror("failed to create Hunts directory\n");
             exit(-1);
         }
     }
 
     char hunt_path[BUF_SIZE];
-    sprintf(hunt_path, "Hunts/%s", hunt_id);                        // creates hunt path
+    sprintf(hunt_path, "../treasure_manager/Hunts/%s", hunt_id);                        // creates hunt path
 
     if(stat(hunt_path, &buf) != 0){                                 // creates hunt directory
         if(mkdir(hunt_path, S_IRUSR | S_IWUSR | S_IXUSR) != 0){     // if it doesn't exist
@@ -182,7 +182,7 @@ void add(char *hunt_id){
 void list(char* hunt_id){
     
     char treasure_filepath[BUF_SIZE];                       // creates treasure file path
-    snprintf(treasure_filepath, sizeof(treasure_filepath), "Hunts/%s/treasures.bin", hunt_id);
+    snprintf(treasure_filepath, sizeof(treasure_filepath), "../treasure_manager/Hunts/%s/treasures.bin", hunt_id);
 
     int treasure_fd = open(treasure_filepath, O_RDONLY);    // opens treasure file
     if(treasure_fd == -1){
@@ -232,7 +232,7 @@ void list(char* hunt_id){
 void view(char* hunt_id, char* treasure_id){
 
     char treasure_filepath[BUF_SIZE];                    // creates treasure file path
-    sprintf(treasure_filepath, "Hunts/%s/treasures.bin", hunt_id);
+    sprintf(treasure_filepath, "../treasure_manager/Hunts/%s/treasures.bin", hunt_id);
 
     int treasure_fd = open(treasure_filepath, O_RDONLY); // opens treasure file
     if(treasure_fd == -1){
@@ -386,7 +386,7 @@ void remove_hunt(char* hunt_id){
 // lists all hunts in the "Hunts" directory ------------------------------------
 
 void list_hunts(){
-    DIR* dir = opendir("Hunts");                  // opens the "Hunts" directory
+    DIR* dir = opendir("../treasure_manager/Hunts");                  // opens the "Hunts" directory
     if(dir == NULL){
         perror("failed to open Hunts directory\n");
         exit(-1);
@@ -404,7 +404,7 @@ void list_hunts(){
             continue;                            // skip . and ..
         }
 
-        sprintf(path, "Hunts/%s", current_dir->d_name);
+        sprintf(path, "../treasure_manager/Hunts/%s", current_dir->d_name);
 
         if (stat(path, &path_stat) == -1) {
             perror("stat failed\n");

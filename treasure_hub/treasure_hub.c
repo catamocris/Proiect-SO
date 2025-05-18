@@ -281,16 +281,35 @@ void calculate_score(){
             continue;                                               // skips current and parent directories
         }
 
+        int calculate_score_pipe[2];                                // pipe: main process reads, child process writes
+        if(pipe(calculate_score_pipe) == -1){                       // creates the pipe
+            perror("Failed to create pipe\n");
+            exit(-1);
+        }
+
         pid_t pid = fork();                                         // forks a new process for each hunt
         if (pid < 0) {
             perror("Failed to fork process\n");
             exit(-1);
         }
         if(pid == 0){                                               // child process -> executes calculate_score
+            close(calculate_score_pipe[0]);                         // closes read
+            dup2(calculate_score_pipe[1], STDOUT_FILENO);           // redirects stdout to pipe
+            close(calculate_score_pipe[1]);                         // closes write
             execlp("./calculate_score", "./calculate_score", hunt->d_name, NULL);
         } else {
             write_message(hunt->d_name);                            // parent process -> writes the hunt name and waits for child
             write_message("\n");
+
+            close(calculate_score_pipe[1]);                         // closes write
+            char buffer[1024];
+            int bytes_read = read(calculate_score_pipe[0], buffer, sizeof(buffer)); // reads from the pipe
+            if(bytes_read > 0){
+                buffer[bytes_read] = '\0';
+                write_message(buffer);                              // prints the message from the child process
+            }
+            close(calculate_score_pipe[0]);                         // closes read
+
             waitpid(pid, NULL, 0);
         }
     }
