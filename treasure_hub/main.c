@@ -7,9 +7,6 @@
 #include <unistd.h>
 
 
-// gcc -o treasure_hub treasure_hub.c main.c ../treasure_manager/io_functions.c ../treasure_manager/treasure_manager.c
-
-
 int main(){
     char input[256];
 
